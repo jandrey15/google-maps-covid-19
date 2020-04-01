@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COVID 19</title>
+  <style>
+    body {
+      margin: 0;
+    }
+    .map {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="map" class="map"></div>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDvbvflFZfKF7FlXfHUn9vhS81YqZXfaCw"></script>
+  <script type="module">
+    import mapStyle from './map-style.js'
+
+    const $map = document.querySelector('#map')
+
+    const map = new window.google.maps.Map($map, {
+      center: {
+        lat: 7.8939100,
+        lng: -72.5078200
+      },
+      zoom: 10,
+      styles: mapStyle,
+    })
+
+    renderData()
+
+    async function getData() {
+      // https://github.com/Laeyoung/COVID-19-API
+      const response = await fetch('https://wuhan-coronavirus-api.laeyoung.endpoint.ainize.ai/jhu-edu/latest')
+      const data = await response.json()
+      return data
+    }
+
+    
+    async function getDataColombia () {
+      // const res = await fetch('http://localhost:5001/covid-19-api-7ae3b/us-central1/api')
+      const res = await fetch('https://us-central1-covid-19-api-7ae3b.cloudfunctions.net/api')
+      const data = await res.json()
+      // console.log(data.data)
+      return data.data.covid
+    }
+
+    function renderExtraData({ confirmed, deaths, recovered, provincestate, countryregion }) {
+      return (`
+        <div>
+          <p> <strong>${provincestate} - ${countryregion}</strong> </p>
+          <p> confirmados: ${confirmed} </p>
+          <p> muertes: ${deaths} </p>
+          <p> recuperados: ${recovered} </p>
+        </div>
+      `)
+    }
+
+    const icon = './icon.png'
+
+    const popup = new window.google.maps.InfoWindow()
+
+    async function renderData() {
+      const data = await getData()
+      // console.log(data)
+      const moreData = await getDataColombia()
+      // console.log(moreData)
+      // data.push({
+      //   provincestate: "",
+      //   countryregion: "Cúcuta",
+      //   lastupdate: "2020-03-27T18:42:00.003Z",
+      //   location: {lat: 7.8939100, lng: -72.5078200},
+      //   countrycode: {iso2: "CO", iso3: "COL"},
+      //   confirmed: 15,
+      //   deaths: 0,
+      //   recovered: 0,
+      // })
+      const dataEnd = data.concat(moreData)
+      dataEnd.forEach(item => {
+        const marker = new window.google.maps.Marker({
+          position: {
+            lat: item.location.lat,
+            lng: item.location.lng,
+          },
+          map,
+          icon,
+          title: String(item.confirmed),
+        })
+        marker.addListener('click', () => {
+          popup.setContent(renderExtraData(item))
+          popup.open(map, marker)
+        })
+        if (item.provincestate === 'Cúcuta') {
+          popup.setContent(renderExtraData(item))
+          popup.open(map, marker)
+        }
+      })
+    }
+
+  </script>
+
+</body>
+</html>
